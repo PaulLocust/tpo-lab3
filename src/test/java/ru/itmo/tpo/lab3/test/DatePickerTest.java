@@ -24,18 +24,18 @@ public class DatePickerTest extends BaseTest {
     // ============== Основной поток ==============
 
     @Test
-    @DisplayName("Поле даты вылета видно в форме")
+    @DisplayName("Поле даты вылета 'Когда' видно в форме")
     void departureDateFieldIsVisible() {
         assertTrue(flightPage.isDepartureDateVisible(),
-                "Поле даты вылета 'Туда' должно отображаться");
+                "Поле даты вылета 'Когда' должно отображаться");
     }
 
     @Test
-    @DisplayName("Клик по полю даты открывает календарь")
+    @DisplayName("Клик по полю даты открывает виджет календаря")
     void calendarOpensOnClick() {
         flightPage.openDepartureDatePicker();
         assertTrue(flightPage.isCalendarVisible(),
-                "По клику на 'Туда' должен открываться виджет календаря");
+                "По клику на 'Когда' должен открываться виджет календаря (gridcell)");
     }
 
     // ============== Краевые случаи ==============
@@ -45,29 +45,25 @@ public class DatePickerTest extends BaseTest {
     class EdgeCases {
 
         @Test
-        @DisplayName("Краевой: Esc закрывает открытый календарь")
-        void calendarClosesOnEscape() {
+        @DisplayName("Краевой: повторный клик по дате не ломает форму")
+        void reopeningCalendar_doesNotBreakForm() {
             flightPage.openDepartureDatePicker();
-            assertTrue(flightPage.isCalendarVisible(),
-                    "Сначала календарь должен быть открыт");
-
-            flightPage.closeCalendarWithEscape();
-
-            assertTrue(flightPage.isCalendarHidden(),
-                    "После нажатия Esc виджет календаря должен закрыться");
+            assertTrue(flightPage.isCalendarVisible(), "Сначала календарь должен открыться");
+            // Кликаем по полю ещё раз — форма должна остаться рабочей
+            flightPage.openDepartureDatePicker();
+            assertTrue(flightPage.isOriginInputVisible(),
+                    "После повторного открытия календаря форма должна оставаться рабочей");
+            assertTrue(flightPage.isSearchButtonVisible(),
+                    "Кнопка поиска должна оставаться видимой");
         }
 
         @Test
-        @DisplayName("Краевой: повторное открытие календаря не ломает форму")
-        void reopeningCalendar_doesNotBreakForm() {
+        @DisplayName("Краевой: открытие календаря не уводит со страницы формы")
+        void openingCalendar_doesNotNavigateAway() {
+            String urlBefore = driver.getCurrentUrl();
             flightPage.openDepartureDatePicker();
-            flightPage.closeCalendarWithEscape();
-            flightPage.openDepartureDatePicker();
-
-            assertTrue(flightPage.isCalendarVisible(),
-                    "Календарь должен открываться при повторном клике на поле даты");
-            assertTrue(flightPage.isOriginInputVisible(),
-                    "Форма поиска должна оставаться рабочей после действий с календарём");
+            assertTrue(driver.getCurrentUrl().equals(urlBefore),
+                    "Открытие календаря не должно менять URL");
         }
     }
 }

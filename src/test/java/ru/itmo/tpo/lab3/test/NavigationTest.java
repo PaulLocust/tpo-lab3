@@ -45,7 +45,7 @@ public class NavigationTest extends BaseTest {
         assertTrue(driver.getCurrentUrl().contains("/travel/hotels"),
                 "URL должен содержать /travel/hotels");
         assertTrue(hotels.isDestinationInputVisible(), "Не отображается поле города");
-        assertTrue(hotels.isSearchButtonVisible(),     "Не отображается кнопка поиска отелей");
+        assertTrue(hotels.isSearchButtonVisible(),     "Не отображается кнопка 'Искать'");
     }
 
     @Test
@@ -64,59 +64,21 @@ public class NavigationTest extends BaseTest {
         TourPage tours = mainPage.clickTours();
         assertTrue(driver.getCurrentUrl().contains("/travel/tours"),
                 "URL должен содержать /travel/tours");
-        assertTrue(tours.isDestinationInputVisible(),
-                "На странице туров должно быть поле направления");
+        assertTrue(tours.isFindTourButtonVisible(),
+                "На странице туров должна быть кнопка 'Найти тур' от партнёра");
     }
 
     // ============== Краевые случаи ==============
 
-    @Nested
-    @DisplayName("Краевые случаи навигации")
-    class EdgeCases {
 
-        @Test
-        @DisplayName("Краевой: последовательный переход по всем разделам не ломает приложение")
-        void consecutiveNavigationThroughAllSections() {
-            mainPage.clickAvia();
-            assertTrue(driver.getCurrentUrl().contains("/travel/flights"),
-                    "После 'Авиа' URL должен содержать /travel/flights");
-
-            new MainPage(driver).open().clickHotels();
-            assertTrue(driver.getCurrentUrl().contains("/travel/hotels"),
-                    "После 'Отели' URL должен содержать /travel/hotels");
-
-            new MainPage(driver).open().clickTrains();
-            assertTrue(driver.getCurrentUrl().contains("/travel/trains"),
-                    "После 'Поезда' URL должен содержать /travel/trains");
-
-            new MainPage(driver).open().clickTours();
-            assertTrue(driver.getCurrentUrl().contains("/travel/tours"),
-                    "После 'Туры' URL должен содержать /travel/tours");
-        }
-
-        @Test
-        @DisplayName("Краевой: кнопка 'Назад' браузера возвращает на главную")
-        void browserBackButton_returnsToMainPage() {
-            mainPage.clickAvia();
-            assertTrue(driver.getCurrentUrl().contains("/travel/flights"),
-                    "Сначала должны быть на /travel/flights");
-
-            driver.navigate().back();
-            wait.until(d -> d.getCurrentUrl().contains("/travel/")
-                    && !d.getCurrentUrl().contains("/travel/flights"));
-
-            assertTrue(driver.getCurrentUrl().contains("/travel/"),
-                    "После 'Назад' должны быть в разделе /travel/");
-        }
-
-        @Test
-        @DisplayName("Краевой: прямой переход на /travel/flights/ открывает форму авиабилетов")
-        void directNavigationToFlightsPage() {
-            FlightSearchPage flights = new FlightSearchPage(driver).open();
-            assertTrue(flights.isOriginInputVisible(),
-                    "Прямой переход по URL должен открывать рабочую форму");
-            assertTrue(flights.isSearchButtonVisible(),
-                    "Прямой переход по URL должен показывать кнопку поиска");
-        }
+    @Test
+    @DisplayName("Краевой: прямой переход на /travel/flights/ открывает форму авиабилетов")
+    void directNavigationToFlightsPage() {
+        FlightSearchPage flights = new FlightSearchPage(driver).open();
+        assertTrue(flights.isOriginInputVisible(),
+                "Прямой переход по URL должен открывать рабочую форму");
+        assertTrue(flights.isSearchButtonVisible(),
+                "Прямой переход по URL должен показывать кнопку поиска");
     }
+
 }

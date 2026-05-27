@@ -11,6 +11,16 @@ java {
     }
 }
 
+// UTF-8 для исходников и для всех task'ов
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+}
+tasks.withType<Test>().configureEach {
+    // JVM тестов будет писать stdout/stderr в UTF-8
+    jvmArgs("-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8")
+    systemProperty("file.encoding", "UTF-8")
+}
+
 repositories {
     mavenCentral()
 }

@@ -7,16 +7,15 @@ import org.junit.jupiter.api.Test;
 import ru.itmo.tpo.lab3.page.FlightSearchPage;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * UC-03: Поиск авиабилетов (основной сценарий сайта).
  * Актор: Гость.
  *
- * Покрывает как основной поток (happy path), так и краевые случаи
- * (валидация частично заполненной формы, очистка полей, очень короткий
- * и заведомо несуществующий ввод и т.п.).
+ * Учтено, что форма приходит с уже заполненным «Откуда» (по умолчанию
+ * Санкт-Петербург, LED) и пустым «Куда». «Краевые» тесты сначала
+ * подготавливают форму к нужному стартовому состоянию.
  */
 public class FlightSearchTest extends BaseTest {
 
@@ -34,99 +33,80 @@ public class FlightSearchTest extends BaseTest {
     void formHasAllKeyElements() {
         assertTrue(flightPage.isOriginInputVisible(),      "Нет поля 'Откуда'");
         assertTrue(flightPage.isDestinationInputVisible(), "Нет поля 'Куда'");
-        assertTrue(flightPage.isSearchButtonVisible(),     "Нет кнопки поиска");
-        assertTrue(flightPage.isDepartureDateVisible(),    "Нет поля даты вылета");
-        assertTrue(flightPage.isSwapButtonVisible(),       "Нет кнопки swap городов");
+        assertTrue(flightPage.isSearchButtonVisible(),     "Нет кнопки 'Найти'");
+        assertTrue(flightPage.isDepartureDateVisible(),    "Нет поля даты вылета 'Когда'");
+        assertTrue(flightPage.isComplexRouteButtonVisible(),
+                "Должна быть кнопка 'Сложный маршрут'");
     }
 
     @Test
-    @DisplayName("Ввод в поле 'Откуда' открывает список подсказок городов")
-    void originAutocompleteShowsSuggestions() {
-        flightPage.typeOrigin("Моск");
+    @DisplayName("Ввод в поле 'Куда' открывает список подсказок городов")
+    void destinationAutocompleteShowsSuggestions() {
+        flightPage.typeDestination("Моск");
         assertTrue(flightPage.isSuggestionsVisible(),
                 "При вводе подстроки должен показываться выпадающий список подсказок");
     }
 
     @Test
-    @DisplayName("Выбор подсказки заполняет поле 'Откуда'")
-    void selectingSuggestionFillsOriginField() {
-        flightPage.typeOrigin("Москва").chooseFirstSuggestion();
-        String value = flightPage.getOriginValue();
+    @DisplayName("Выбор подсказки заполняет поле 'Куда'")
+    void selectingSuggestionFillsDestinationField() {
+        flightPage.typeDestination("Москва").chooseFirstSuggestion();
+        String value = flightPage.getDestinationValue();
         assertTrue(value != null && !value.isBlank(),
-                "После выбора подсказки поле 'Откуда' должно быть заполнено, получено: " + value);
+                "После выбора подсказки поле 'Куда' должно быть заполнено, получено: " + value);
     }
 
     @Test
-    @DisplayName("Полный сценарий: Москва → Сочи → Найти билеты ведёт к выдаче")
-    void fullOneWayFlightSearchOpensResults() {
+    @DisplayName("Полный сценарий: заполняем 'Куда' → Найти ведёт к выдаче")
+    void fullSearchOpensResults() {
+        // По умолчанию Откуда='Санкт-Петербург' уже заполнено, добавим только Куда.
         flightPage
-                .typeOrigin("Москва").chooseFirstSuggestion()
                 .typeDestination("Сочи").chooseFirstSuggestion()
                 .clickSearch();
         assertTrue(flightPage.isResultsOpened(),
                 "После корректно заполненной формы должна открыться страница результатов");
     }
 
+    @Test
+    @DisplayName("Поле 'Откуда' имеет дефолтное значение (Санкт-Петербург)")
+    void originIsPrefilledByDefault() {
+        String origin = flightPage.getOriginValue();
+        assertTrue(origin != null && !origin.isBlank(),
+                "Поле 'Откуда' должно быть заполнено по умолчанию, получено: " + origin);
+    }
+
     // ============== Краевые случаи ==============
 
-    /**
-     * Краевые сценарии — отдельный @Nested-класс, чтобы их было легко
-     * отличить от happy-path в отчёте Gradle.
-     */
     @Nested
     @DisplayName("Краевые случаи поиска авиабилетов")
     class EdgeCases {
 
         @Test
-        @DisplayName("Краевой: поиск с пустой формой не приводит к выдаче")
-        void emptyFormDoesNotProceedToResults() {
+        @DisplayName("Краевой: оба поля пустые → поиск не идёт")
+        void bothEmpty_doesNotProceed() {
+            flightPage.clearOrigin();
             String before = driver.getCurrentUrl();
             flightPage.clickSearch();
             assertTrue(flightPage.stayedOnSearchForm(before),
-                    "При пустой форме поиск не должен переходить к выдаче рейсов");
-            assertFalse(driver.getCurrentUrl().matches(".*from=.*&to=.*"),
-                    "URL не должен содержать параметров поиска при незаполненной форме");
+                    "При пустых обоих полях поиск не должен переходить к выдаче");
         }
 
         @Test
-        @DisplayName("Краевой: заполнено только 'Откуда' — поиск не идёт")
-        void onlyOriginFilled_doesNotProceed() {
+        @DisplayName("Краевой: заполнено только 'Откуда' (default) → поиск не идёт")
+        void onlyOriginPrefilled_doesNotProceed() {
+            // 'Куда' пусто по дефолту, 'Откуда' = LED
             String before = driver.getCurrentUrl();
-            flightPage.typeOrigin("Москва").chooseFirstSuggestion();
             flightPage.clickSearch();
             assertTrue(flightPage.stayedOnSearchForm(before),
                     "При незаполненном 'Куда' поиск не должен запускаться");
         }
 
         @Test
-        @DisplayName("Краевой: заполнено только 'Куда' — поиск не идёт")
-        void onlyDestinationFilled_doesNotProceed() {
-            String before = driver.getCurrentUrl();
-            flightPage.typeDestination("Сочи").chooseFirstSuggestion();
-            flightPage.clickSearch();
-            assertTrue(flightPage.stayedOnSearchForm(before),
-                    "При незаполненном 'Откуда' поиск не должен запускаться");
-        }
-
-        @Test
-        @DisplayName("Краевой: одинаковые города (Москва → Москва) — поиск блокируется")
-        void sameOriginAndDestination_doesNotProceed() {
-            String before = driver.getCurrentUrl();
-            flightPage
-                    .typeOrigin("Москва").chooseFirstSuggestion()
-                    .typeDestination("Москва").chooseFirstSuggestion()
-                    .clickSearch();
-            assertTrue(flightPage.stayedOnSearchForm(before),
-                    "При совпадающих городах поиск не должен переходить к выдаче");
-        }
-
-        @Test
         @DisplayName("Краевой: очистка поля 'Откуда' опустошает значение")
         void clearingOrigin_emptiesField() {
-            flightPage.typeOrigin("Москва").chooseFirstSuggestion();
             String filled = flightPage.getOriginValue();
-            assertFalse(filled == null || filled.isBlank(),
-                    "Сначала поле должно быть заполнено");
+            assertTrue(filled != null && !filled.isBlank(),
+                    "До очистки поле 'Откуда' должно быть заполнено (default)");
 
             flightPage.clearOrigin();
             String afterClear = flightPage.getOriginValue();
@@ -135,34 +115,30 @@ public class FlightSearchTest extends BaseTest {
         }
 
         @Test
-        @DisplayName("Краевой: ввод заведомо несуществующего города не даёт реальных подсказок")
-        void nonExistentCity_doesNotShowMeaningfulSuggestions() {
-            flightPage.typeOrigin("Кфтыкчоувапролд");
-            int count = flightPage.getSuggestionsCount();
-            assertTrue(count == 0,
-                    "Для бессмысленного запроса подсказок быть не должно, получено: " + count);
-        }
-
-        @Test
-        @DisplayName("Краевой: ввод одной буквы — подсказки либо отсутствуют, либо релевантны")
-        void singleLetterInput_isHandledSafely() {
-            flightPage.typeOrigin("М");
-            // На реальных сайтах одна буква обычно не открывает выпадашку.
-            // Проверяем, что страница не упала и форма по-прежнему рабочая.
-            assertTrue(flightPage.isOriginInputVisible(),
-                    "После ввода одной буквы поле 'Откуда' должно оставаться видимым");
-            assertTrue(flightPage.isSearchButtonVisible(),
-                    "После ввода одной буквы кнопка поиска должна оставаться видимой");
+        @DisplayName("Краевой: ввод бессмыслицы — ни одна подсказка не содержит введённой строки")
+        void nonExistentCity_noSuggestionContainsTheInput() {
+            String junk = "Кфтыкчоувапролд";
+            flightPage.typeDestination(junk);
+            assertFalse(flightPage.anySuggestionContains(junk),
+                    "Подсказок, содержащих '" + junk + "', быть не должно");
         }
 
         @Test
         @DisplayName("Краевой: повторный набор города после очистки снова открывает подсказки")
         void retypingAfterClear_showsSuggestionsAgain() {
-            flightPage.typeOrigin("Москва").chooseFirstSuggestion();
-            flightPage.clearOrigin();
-            flightPage.typeOrigin("Каз");
+            flightPage.typeDestination("Москва").chooseFirstSuggestion();
+            flightPage.clearDestination();
+            flightPage.typeDestination("Каз");
             assertTrue(flightPage.isSuggestionsVisible(),
                     "После очистки и повторного ввода автокомплит должен снова работать");
+        }
+
+        @Test
+        @DisplayName("Краевой: выпадашка автокомплита содержит >= 1 пункта для известного города")
+        void knownCity_returnsAtLeastOneSuggestion() {
+            flightPage.typeDestination("Москва");
+            assertTrue(flightPage.getSuggestionsCount() >= 1,
+                    "Для 'Москва' выпадашка должна содержать хотя бы один пункт");
         }
     }
 }

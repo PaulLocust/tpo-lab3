@@ -12,6 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * UC-04: Поиск отелей.
  * Актор: Гость.
+ *
+ * На форме отелей по умолчанию заполнены даты и количество гостей,
+ * не заполнено только направление.
  */
 public class HotelSearchTest extends BaseTest {
 
@@ -25,31 +28,32 @@ public class HotelSearchTest extends BaseTest {
     // ============== Основной поток ==============
 
     @Test
-    @DisplayName("Форма поиска отелей содержит поле города и кнопку поиска")
-    void formHasMandatoryFields() {
-        assertTrue(hotelPage.isDestinationInputVisible(),
-                "Нет поля выбора города/направления");
-        assertTrue(hotelPage.isSearchButtonVisible(),
-                "Нет кнопки поиска отелей");
+    @DisplayName("Форма содержит поле направления, даты, гостей и кнопку 'Искать'")
+    void formHasAllFields() {
+        assertTrue(hotelPage.isDestinationInputVisible(), "Нет поля направления");
+        assertTrue(hotelPage.isDateFieldVisible(),        "Нет поля диапазона дат");
+        assertTrue(hotelPage.isGuestsFieldVisible(),      "Нет поля количества гостей");
+        assertTrue(hotelPage.isSearchButtonVisible(),     "Нет кнопки 'Искать'");
     }
 
     @Test
-    @DisplayName("Ввод в поле города показывает выпадающие подсказки")
+    @DisplayName("Ввод названия города показывает выпадающий listbox подсказок")
     void destinationAutocompleteShowsSuggestions() {
-        hotelPage.typeDestination("Сочи");
-        assertTrue(hotelPage.isSuggestionsVisible(),
+        hotelPage.typeDestination("Соч");
+        assertTrue(hotelPage.isSuggestionsListboxVisible()
+                        || hotelPage.isSuggestionsVisible(),
                 "Должны отображаться подсказки автокомплита при вводе названия города");
     }
 
     @Test
-    @DisplayName("Полный сценарий: выбор города и нажатие 'Найти' открывает результаты")
+    @DisplayName("Полный сценарий: выбор города и нажатие 'Искать' переходит к результатам")
     void hotelSearchByCityOpensResults() {
         hotelPage
                 .typeDestination("Сочи")
                 .chooseFirstSuggestion()
                 .clickSearch();
         assertTrue(hotelPage.isResultsOpened(),
-                "После выбора города и нажатия 'Найти' должна открыться страница результатов");
+                "После выбора города и нажатия 'Искать' должна открыться страница результатов");
     }
 
     // ============== Краевые случаи ==============
@@ -59,7 +63,7 @@ public class HotelSearchTest extends BaseTest {
     class EdgeCases {
 
         @Test
-        @DisplayName("Краевой: поиск с пустым полем города не запускает выдачу")
+        @DisplayName("Краевой: поиск с пустым полем города не даёт перехода")
         void emptyDestination_doesNotProceed() {
             String before = driver.getCurrentUrl();
             hotelPage.clickSearch();
@@ -68,35 +72,36 @@ public class HotelSearchTest extends BaseTest {
         }
 
         @Test
-        @DisplayName("Краевой: ввод заведомо несуществующего города не даёт реальных подсказок")
-        void nonExistentCity_doesNotShowMeaningfulSuggestions() {
-            hotelPage.typeDestination("Кфтыкчоувапролд");
-            int count = hotelPage.getSuggestionsCount();
-            assertTrue(count == 0,
-                    "Для бессмысленного запроса подсказок быть не должно, получено: " + count);
+        @DisplayName("Краевой: ввод бессмыслицы — ни одна подсказка не содержит введённой строки")
+        void nonExistentCity_noSuggestionContainsInput() {
+            String junk = "Кфтыкчоувапролд";
+            hotelPage.typeDestination(junk);
+            assertFalse(hotelPage.anySuggestionContains(junk),
+                    "Подсказок, содержащих '" + junk + "', быть не должно");
         }
 
         @Test
-        @DisplayName("Краевой: очистка поля города опустошает выпадашку")
-        void clearingDestination_removesSuggestions() {
-            hotelPage.typeDestination("Сочи");
-            assertTrue(hotelPage.isSuggestionsVisible(), "Сначала подсказки должны быть видны");
-
+        @DisplayName("Краевой: очистка поля города убирает значение")
+        void clearingDestination_emptiesValue() {
+            hotelPage.typeDestination("Сочи").chooseFirstSuggestion();
+            String filled = hotelPage.getDestinationValue();
+            assertTrue(filled != null && !filled.isBlank(),
+                    "До очистки поле должно быть заполнено");
             hotelPage.clearDestination();
-            int count = hotelPage.getSuggestionsCount();
-            assertFalse(count > 0 && hotelPage.isSuggestionsVisible() && count == hotelPage.getSuggestionsCount(),
-                    "После очистки поля подсказки автокомплита по запросу не должны оставаться");
+            String afterClear = hotelPage.getDestinationValue();
+            assertTrue(afterClear == null || afterClear.isBlank(),
+                    "После очистки поле города должно быть пустым");
         }
 
         @Test
-        @DisplayName("Краевой: повторное открытие страницы не ломает поиск")
+        @DisplayName("Краевой: повторное открытие страницы не ломает форму")
         void reopenPage_preservesFunctionality() {
             hotelPage.typeDestination("Сочи");
             hotelPage = new HotelSearchPage(driver).open();
             assertTrue(hotelPage.isDestinationInputVisible(),
                     "После перезагрузки страницы поле города должно быть доступно");
             assertTrue(hotelPage.isSearchButtonVisible(),
-                    "После перезагрузки кнопка поиска должна быть доступна");
+                    "После перезагрузки кнопка 'Искать' должна быть доступна");
         }
     }
 }

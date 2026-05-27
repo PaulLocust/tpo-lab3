@@ -10,52 +10,68 @@ import java.util.List;
 
 /**
  * Страница поиска авиабилетов (/travel/flights/).
+ *
+ * Реальные локаторы T-Travel получены сканером DomDiscovery (см. dom-discovery*.txt):
+ *  - input  «Откуда»/«Куда»: data-qa-type содержит '.value.input' и 'Suggest_'.
+ *  - кнопка «Найти»: data-qa-type='uikit/button', текст 'Найти'.
+ *  - кнопка «Сложный маршрут»: текст 'Сложный маршрут'.
+ *  - тогглы «Лечу по работе» и «Открыть отели в новой вкладке».
+ *  - подсказки автокомплита: li[data-qa-type='itemColumn'].
+ *  - календарь дат: span[role='gridcell' и data-qa-type содержит 'CalendarItem'].
+ *  - селектор пассажиров: div[data-qa-type='InputBox_not-focused'][.//text()='Пассажиры'].
+ *
+ * По умолчанию форма уже частично заполнена (Откуда='Санкт-Петербург', Куда=''),
+ * поэтому тесты «пустой формы» сначала очищают Откуда.
  */
 public class FlightSearchPage extends BasePage {
 
     public static final String URL = "https://www.tbank.ru/travel/flights/";
 
+    // Сам <input> в T-Travel визуально невидим (его перекрывает div-placeholder),
+    // поэтому Selenium считает его не interactable. Стратегия:
+    //  - для клика/фокуса → кликаем по корневому КОНТЕЙНЕРУ Suggest (см. CONTAINER xpath),
+    //  - для чтения value → читаем атрибут самого input напрямую (см. INPUT xpath).
+    private static final String XPATH_ORIGIN_CONTAINER =
+            "//span[contains(@data-qa-type,'inputBox.label') and normalize-space()='Откуда']"
+                    + "/ancestor::div[contains(@data-qa-type,'Suggest_')"
+                    + "                and contains(@data-qa-type,'_no-error')"
+                    + "                and not(contains(@data-qa-type,'.'))][1]";
+    private static final String XPATH_DESTINATION_CONTAINER =
+            "//span[contains(@data-qa-type,'inputBox.label') and normalize-space()='Куда']"
+                    + "/ancestor::div[contains(@data-qa-type,'Suggest_')"
+                    + "                and contains(@data-qa-type,'_no-error')"
+                    + "                and not(contains(@data-qa-type,'.'))][1]";
+
     private static final String XPATH_ORIGIN_INPUT =
-            "//input[@placeholder='Откуда' or @aria-label='Откуда' or contains(@placeholder,'Откуда')]";
+            XPATH_ORIGIN_CONTAINER + "//input[contains(@data-qa-type,'.value.input')]";
     private static final String XPATH_DESTINATION_INPUT =
-            "//input[@placeholder='Куда' or @aria-label='Куда' or contains(@placeholder,'Куда')]";
+            XPATH_DESTINATION_CONTAINER + "//input[contains(@data-qa-type,'.value.input')]";
 
-    private static final String XPATH_SUGGESTIONS =
-            "//ul[@role='listbox']//li"
-                    + " | //div[@role='listbox']//div[@role='option']"
-                    + " | //*[contains(@data-qa-type,'suggest') or contains(@data-test,'suggest')]"
-                    + "   //*[self::li or self::div][string-length(normalize-space(.))>0]";
+    private static final String XPATH_DATE_FIELD =
+            "//div[contains(@data-qa-type,'DateTextInput')]"
+                    + " | //*[normalize-space()='Когда']/ancestor::div[@data-qa-type][1]";
 
-    private static final String XPATH_DATE_DEPARTURE =
-            "//input[@placeholder='Туда' or @aria-label='Туда' or contains(@placeholder,'Туда')]";
-    private static final String XPATH_DATE_RETURN =
-            "//input[@placeholder='Обратно' or @aria-label='Обратно' or contains(@placeholder,'Обратно')]";
+    private static final String XPATH_PASSENGERS_FIELD =
+            "//div[@data-qa-type='InputBox_not-focused'][.//text()[contains(.,'Пассажиры')]]"
+                    + " | //div[@data-qa-file='PassengersSelector']";
 
-    private static final String XPATH_SWAP_BUTTON =
-            "//button[@aria-label='Поменять местами' or @aria-label='Поменять города'"
-                    + " or contains(@aria-label,'омен') or contains(@data-qa-type,'swap')]";
-
-    private static final String XPATH_PASSENGERS_BUTTON =
-            "//button[contains(.,'пассажир') or contains(.,'Эконом') or contains(.,'Бизнес')]"
-                    + " | //*[@aria-label='Пассажиры' or contains(@aria-label,'ассажир')]";
-
-    private static final String XPATH_PASSENGERS_PANEL =
-            "//*[contains(@role,'dialog') or contains(@class,'opover') or contains(@class,'opup')"
-                    + " or contains(@class,'enu')]"
-                    + "[.//text()[contains(., 'Эконом') or contains(., 'Бизнес') or contains(., 'пассажир')]]";
-
-    private static final String XPATH_BUSINESS_OPTION =
-            "//*[contains(@role,'menuitem') or self::button or self::label]"
-                    + "[normalize-space()='Бизнес' or contains(.,'Бизнес')]";
+    private static final String XPATH_PASSENGERS_ARROW =
+            "//div[@data-qa-type='Arrow_notopened' or @data-qa-type='Arrow_opened']";
 
     private static final String XPATH_SEARCH_BUTTON =
-            "//button[normalize-space()='Найти билеты' or normalize-space()='Найти'"
-                    + " or contains(.,'Найти билеты')]";
+            "//button[@data-qa-type='uikit/button' and normalize-space()='Найти']";
 
-    private static final String XPATH_CALENDAR =
-            "//*[@role='dialog' or contains(@class,'alendar') or contains(@class,'atepicker')]"
-                    + "[.//*[self::button or self::div][string-length(normalize-space(.))=1"
-                    + "  or string-length(normalize-space(.))=2]]";
+    private static final String XPATH_COMPLEX_ROUTE_BUTTON =
+            "//button[normalize-space()='Сложный маршрут']";
+
+    private static final String XPATH_WORK_TRIP_TOGGLE =
+            "//input[@data-qa-type='WorkTripToggle.input']";
+
+    private static final String XPATH_SUGGESTIONS =
+            "//li[@data-qa-type='itemColumn']";
+
+    private static final String XPATH_CALENDAR_CELL =
+            "//*[@role='gridcell' and contains(@data-qa-type,'CalendarItem')]";
 
     public FlightSearchPage(WebDriver driver) {
         super(driver);
@@ -63,66 +79,86 @@ public class FlightSearchPage extends BasePage {
 
     public FlightSearchPage open() {
         driver.get(URL);
+        waitVisible(By.xpath(XPATH_SEARCH_BUTTON));
         return this;
     }
 
     public boolean isOriginInputVisible() {
-        return isDisplayedFast(By.xpath(XPATH_ORIGIN_INPUT));
+        return isPresent(By.xpath(XPATH_ORIGIN_INPUT));
     }
 
     public boolean isDestinationInputVisible() {
-        return isDisplayedFast(By.xpath(XPATH_DESTINATION_INPUT));
+        return isPresent(By.xpath(XPATH_DESTINATION_INPUT));
     }
 
     public boolean isSearchButtonVisible() {
         return isDisplayedFast(By.xpath(XPATH_SEARCH_BUTTON));
     }
 
-    public boolean isSwapButtonVisible() {
-        return isPresent(By.xpath(XPATH_SWAP_BUTTON));
-    }
-
     public boolean isDepartureDateVisible() {
-        return isPresent(By.xpath(XPATH_DATE_DEPARTURE));
+        return isPresent(By.xpath(XPATH_DATE_FIELD));
     }
 
-    public boolean isReturnDateFieldVisible() {
-        return isPresent(By.xpath(XPATH_DATE_RETURN));
+    public boolean isComplexRouteButtonVisible() {
+        return isPresent(By.xpath(XPATH_COMPLEX_ROUTE_BUTTON));
+    }
+
+    public boolean isWorkTripTogglePresent() {
+        return isPresent(By.xpath(XPATH_WORK_TRIP_TOGGLE));
     }
 
     public FlightSearchPage typeOrigin(String city) {
-        clearAndType(waitClickable(By.xpath(XPATH_ORIGIN_INPUT)), city);
+        setFieldValue(XPATH_ORIGIN_CONTAINER, XPATH_ORIGIN_INPUT, city);
         return this;
     }
 
     public FlightSearchPage typeDestination(String city) {
-        clearAndType(waitClickable(By.xpath(XPATH_DESTINATION_INPUT)), city);
+        setFieldValue(XPATH_DESTINATION_CONTAINER, XPATH_DESTINATION_INPUT, city);
         return this;
     }
 
     public FlightSearchPage clearOrigin() {
-        clearField(waitClickable(By.xpath(XPATH_ORIGIN_INPUT)));
+        setFieldValue(XPATH_ORIGIN_CONTAINER, XPATH_ORIGIN_INPUT, "");
         return this;
     }
 
     public FlightSearchPage clearDestination() {
-        clearField(waitClickable(By.xpath(XPATH_DESTINATION_INPUT)));
+        setFieldValue(XPATH_DESTINATION_CONTAINER, XPATH_DESTINATION_INPUT, "");
         return this;
+    }
+
+    /**
+     * Универсальный ввод: кликаем контейнер (открывается дропдаун Suggest),
+     * затем используем JS-сеттер чтобы корректно обновить React-controlled input,
+     * после этого реальный sendKeys эмулирует пользовательский набор (keydown/keyup),
+     * чтобы React показал отфильтрованные подсказки.
+     */
+    private void setFieldValue(String containerXpath, String inputXpath, String text) {
+        WebElement container = waitVisible(By.xpath(containerXpath));
+        scrollTo(container);
+        try { container.click(); } catch (Exception e) { jsClick(container); }
+
+        WebElement input = driver.findElement(By.xpath(inputXpath));
+        // 1) сбросить текущее значение через React-friendly сеттер
+        setReactInputValue(input, "");
+        // 2) сфокусировать input через JS — sendKeys будет уходить именно сюда
+        jsFocus(input);
+        if (!text.isEmpty()) {
+            // 3) симулируем реальный набор
+            driver.switchTo().activeElement().sendKeys(text);
+        }
     }
 
     public boolean isSuggestionsVisible() {
         return isDisplayedFast(By.xpath(XPATH_SUGGESTIONS));
     }
 
-    /** Количество реально видимых пунктов автокомплита. 0 — если выпадашки нет. */
     public int getSuggestionsCount() {
         try {
             List<WebElement> items = driver.findElements(By.xpath(XPATH_SUGGESTIONS));
             int count = 0;
             for (WebElement item : items) {
-                if (item.isDisplayed() && !item.getText().isBlank()) {
-                    count++;
-                }
+                if (item.isDisplayed() && !item.getText().isBlank()) count++;
             }
             return count;
         } catch (Exception e) {
@@ -130,52 +166,58 @@ public class FlightSearchPage extends BasePage {
         }
     }
 
+    /** Есть ли среди видимых подсказок хотя бы одна, чей текст содержит подстроку. */
+    public boolean anySuggestionContains(String fragment) {
+        try {
+            for (WebElement el : driver.findElements(By.xpath(XPATH_SUGGESTIONS))) {
+                if (el.isDisplayed()) {
+                    String text = el.getText();
+                    if (text != null && text.toLowerCase().contains(fragment.toLowerCase())) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
     public FlightSearchPage chooseFirstSuggestion() {
         waitVisible(By.xpath(XPATH_SUGGESTIONS));
-        List<WebElement> items = waitVisibleElements(By.xpath(XPATH_SUGGESTIONS));
-        for (WebElement item : items) {
-            if (item.isDisplayed()) {
-                scrollTo(item);
-                item.click();
-                return this;
-            }
-        }
-        driver.switchTo().activeElement().sendKeys(Keys.ENTER);
+        // Используем клавиатурную навигацию: Down → Enter.
+        // Это надёжнее, чем кликать по li[itemColumn], которое React
+        // может перерисовывать или менять до click-евента.
+        WebElement active = driver.switchTo().activeElement();
+        active.sendKeys(Keys.ARROW_DOWN);
+        active.sendKeys(Keys.ENTER);
         return this;
     }
 
     public String getOriginValue() {
-        return waitVisible(By.xpath(XPATH_ORIGIN_INPUT)).getAttribute("value");
+        // input визуально невидим, но атрибут value читается без проблем
+        return driver.findElement(By.xpath(XPATH_ORIGIN_INPUT)).getAttribute("value");
     }
 
     public String getDestinationValue() {
-        return waitVisible(By.xpath(XPATH_DESTINATION_INPUT)).getAttribute("value");
-    }
-
-    public FlightSearchPage clickSwap() {
-        WebElement btn = waitClickable(By.xpath(XPATH_SWAP_BUTTON));
-        scrollTo(btn);
-        btn.click();
-        return this;
+        return driver.findElement(By.xpath(XPATH_DESTINATION_INPUT)).getAttribute("value");
     }
 
     public FlightSearchPage openDepartureDatePicker() {
-        WebElement field = waitClickable(By.xpath(XPATH_DATE_DEPARTURE));
-        scrollTo(field);
-        field.click();
+        WebElement el = waitClickable(By.xpath(XPATH_DATE_FIELD));
+        scrollTo(el);
+        el.click();
         return this;
     }
 
     public boolean isCalendarVisible() {
-        return isDisplayedFast(By.xpath(XPATH_CALENDAR));
+        return isDisplayedFast(By.xpath(XPATH_CALENDAR_CELL));
     }
 
     public boolean isCalendarHidden() {
         try {
             return shortWait.until(
-                    ExpectedConditions.invisibilityOfElementLocated(By.xpath(XPATH_CALENDAR)));
+                    ExpectedConditions.invisibilityOfElementLocated(By.xpath(XPATH_CALENDAR_CELL)));
         } catch (Exception e) {
-            return !isPresent(By.xpath(XPATH_CALENDAR));
+            return !isPresent(By.xpath(XPATH_CALENDAR_CELL));
         }
     }
 
@@ -185,32 +227,49 @@ public class FlightSearchPage extends BasePage {
     }
 
     public FlightSearchPage openPassengersPanel() {
-        WebElement btn = waitClickable(By.xpath(XPATH_PASSENGERS_BUTTON));
+        WebElement el = waitClickable(By.xpath(XPATH_PASSENGERS_FIELD));
+        scrollTo(el);
+        el.click();
+        return this;
+    }
+
+    public boolean isPassengersPanelOpen() {
+        // Признак открытой панели — стрелка перешла в состояние 'opened',
+        // или появилась всплывашка с текстом 'Эконом'/'Бизнес'.
+        return isPresent(By.xpath("//div[@data-qa-type='Arrow_opened']"))
+                || isPresent(By.xpath("//*[contains(@data-qa-type,'popover') "
+                + "or contains(@data-qa-type,'popup') or @role='dialog']"
+                + "[.//text()[contains(.,'Эконом') or contains(.,'Бизнес')]]"));
+    }
+
+    public FlightSearchPage clickComplexRoute() {
+        WebElement btn = waitClickable(By.xpath(XPATH_COMPLEX_ROUTE_BUTTON));
         scrollTo(btn);
         btn.click();
         return this;
     }
 
-    public boolean isPassengersPanelOpen() {
-        return isDisplayedFast(By.xpath(XPATH_PASSENGERS_PANEL));
-    }
-
-    public FlightSearchPage selectBusinessClass() {
-        if (!isPassengersPanelOpen()) {
-            openPassengersPanel();
+    public FlightSearchPage toggleWorkTrip() {
+        WebElement toggle = driver.findElement(By.xpath(XPATH_WORK_TRIP_TOGGLE));
+        scrollTo(toggle);
+        // input[type=checkbox] часто скрыт визуально — кликаем по обёртке label/span
+        try {
+            toggle.click();
+        } catch (Exception e) {
+            WebElement wrapper = driver.findElement(
+                    By.xpath("//span[@data-qa-type='WorkTripToggle']"));
+            wrapper.click();
         }
-        WebElement option = waitClickable(By.xpath(XPATH_BUSINESS_OPTION));
-        scrollTo(option);
-        option.click();
         return this;
     }
 
-    public boolean isBusinessClassSelected() {
-        By by = By.xpath(
-                "//*[contains(.,'Бизнес')][@aria-selected='true'"
-                        + " or contains(@class,'elected') or contains(@class,'ctive')]"
-                        + " | //button[contains(.,'Бизнес')]");
-        return isPresent(by);
+    public boolean isWorkTripChecked() {
+        try {
+            WebElement el = driver.findElement(By.xpath(XPATH_WORK_TRIP_TOGGLE));
+            return el.isSelected();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public FlightSearchPage clickSearch() {
@@ -220,20 +279,23 @@ public class FlightSearchPage extends BasePage {
         return this;
     }
 
+    /** Дождаться появления страницы выдачи рейсов. */
     public boolean isResultsOpened() {
         try {
             return wait.until(ExpectedConditions.or(
                     ExpectedConditions.urlContains("search"),
-                    ExpectedConditions.urlContains("results"),
-                    ExpectedConditions.urlMatches(".*from=.*to=.*"),
+                    ExpectedConditions.urlContains("flights/routes"),
+                    ExpectedConditions.urlContains("?from="),
+                    ExpectedConditions.urlMatches(".*from=[A-Z]{3}.*to=[A-Z]{3}.*"),
                     ExpectedConditions.visibilityOfElementLocated(
-                            By.xpath("//*[contains(.,'найдено') or contains(.,'рейс')]"))));
+                            By.xpath("//*[contains(.,'найдено') or contains(.,'Загружаем') "
+                                    + "or contains(.,'рейс')]"))));
         } catch (Exception e) {
             return false;
         }
     }
 
-    /** true, если URL не изменился (форма не приняла отправку). */
+    /** true, если URL за короткий таймаут не изменился — поиск не запустился. */
     public boolean stayedOnSearchForm(String previousUrl) {
         try {
             shortWait.until(ExpectedConditions.not(ExpectedConditions.urlToBe(previousUrl)));

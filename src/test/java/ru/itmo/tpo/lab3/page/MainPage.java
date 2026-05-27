@@ -30,6 +30,13 @@ public class MainPage extends BasePage {
 
     public MainPage open() {
         driver.get(URL);
+        // ждём пока в шапке появятся все 4 вкладки-навигации,
+        // иначе следующий click* может не найти их (React/Next.js гидрация
+        // может отрисовать одну часть навигации раньше другой).
+        wait.until(d -> isPresent(By.xpath(XPATH_NAV_AVIA_FB))
+                && isPresent(By.xpath(XPATH_NAV_HOTELS_FB))
+                && isPresent(By.xpath(XPATH_NAV_TRAINS_FB))
+                && isPresent(By.xpath(XPATH_NAV_TOURS_FB)));
         return this;
     }
 
@@ -78,10 +85,12 @@ public class MainPage extends BasePage {
     }
 
     private void clickNav(String primaryXpath, String fallbackXpath) {
+        // Сразу через JS — у T-Travel сверху едет промо-баннер,
+        // который может перехватить обычный клик.
         WebElement link = isPresent(By.xpath(primaryXpath))
-                ? waitClickable(By.xpath(primaryXpath))
-                : waitClickable(By.xpath(fallbackXpath));
+                ? driver.findElement(By.xpath(primaryXpath))
+                : driver.findElement(By.xpath(fallbackXpath));
         scrollTo(link);
-        link.click();
+        jsClick(link);
     }
 }

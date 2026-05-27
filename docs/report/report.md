@@ -97,25 +97,26 @@ flowchart LR
 
 | Категория              | Кол-во проверок |
 |------------------------|----------------:|
-| Happy-path             |  30             |
+| Happy-path             |  33             |
 | Краевые случаи         |  25             |
-| **Итого @Test методов**| **55**          |
+| **Итого @Test методов**| **58**          |
 
 Каждая проверка прогоняется в **двух браузерах** (Chrome и Firefox) — итого
-**110 прогонов** в кросс-браузерном режиме.
+**116 прогонов** в кросс-браузерном режиме.
 
 ### Карта краевых случаев по use case
 
-| UC    | Класс                          | Краевые случаи в `@Nested EdgeCases`                                                                                                  |
-|-------|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| UC-02 | `NavigationTest`               | Последовательная навигация по всем разделам · Кнопка «Назад» браузера · Прямой переход по URL                                          |
-| UC-03 | `FlightSearchTest`             | Пустая форма · Только «Откуда» · Только «Куда» · Одинаковые города · Очистка поля · Несуществующий город · Один символ · Очистка+повтор |
-| UC-04 | `HotelSearchTest`              | Пустое поле города · Несуществующий город · Очистка поля города · Перезагрузка страницы                                                |
-| UC-05 | `TrainSearchTest`              | Пустая форма · Только «Откуда» · Одинаковые города · Несуществующий город                                                              |
-| UC-07 | `SwapCitiesTest`               | Swap при пустых полях · Двойной swap → исходное состояние                                                                              |
-| UC-08 | `DatePickerTest`               | Esc закрывает календарь · Повторное открытие календаря                                                                                 |
-| UC-09 | `PassengersTest`               | Панель не ломает форму · Повторное открытие после выбора «Бизнес»                                                                      |
-| UC-10 | `CrossSectionAutocompleteTest` | Несуществующий город на всех трёх формах · Известный город даёт ≥1 пункт · Пустой ввод не открывает выпадашку                          |
+| UC    | Класс                          | Краевые случаи в `@Nested EdgeCases`                                                                  |
+|-------|--------------------------------|--------------------------------------------------------------------------------------------------------|
+| UC-02 | `NavigationTest`               | Прямой переход по URL                                                                                  |
+| UC-03 | `FlightSearchTest`             | Оба поля пустые · Только «Откуда» · Очистка поля · Бессмысленный ввод · Повторный набор · Известный город |
+| UC-04 | `HotelSearchTest`              | Пустое поле города · Бессмысленный ввод · Очистка поля города · Перезагрузка страницы                  |
+| UC-05 | `TrainSearchTest`              | Пустая форма · Только «Откуда» · Бессмысленный ввод · Повторный набор                                  |
+| UC-06 | `TourPageTest`                 | Перезагрузка страницы туров                                                                            |
+| UC-07 | `ComplexRouteTest`             | Сложный маршрут не ломает форму · Двойное переключение тоггла                                          |
+| UC-08 | `DatePickerTest`               | Повторное открытие календаря · Открытие не уводит со страницы                                          |
+| UC-09 | `PassengersTest`               | Панель не ломает форму · Открытие селектора не уводит с /flights/                                      |
+| UC-10 | `CrossSectionAutocompleteTest` | Бессмысленный ввод во всех 3 формах · Известный город даёт ≥1 пункт · Пустой ввод не открывает выпадашку |
 
 ---
 
@@ -152,89 +153,88 @@ flowchart LR
 ### UC-02 / `NavigationTest`
 
 | # | Метод                                       | Что проверяется |
-|---|----------------------------------------------|------------------|
+|---|---------------------------------------------|------------------|
 | 1 | `aviaTabOpensFlightForm`                    | Клик «Авиа» → URL `/travel/flights`, форма видна |
 | 2 | `hotelsTabOpensHotelForm`                   | Клик «Отели» → URL `/travel/hotels`, форма видна |
 | 3 | `trainsTabOpensTrainForm`                   | Клик «Поезда» → URL `/travel/trains`, форма видна |
-| 4 | `toursTabOpensToursPage`                    | Клик «Туры» → URL `/travel/tours`, поле направления |
-| 5 | `EdgeCases.consecutiveNavigationThroughAllSections` | **Краевой:** последовательный обход всех 4 разделов |
-| 6 | `EdgeCases.browserBackButton_returnsToMainPage`     | **Краевой:** кнопка «Назад» браузера |
-| 7 | `EdgeCases.directNavigationToFlightsPage`           | **Краевой:** прямой переход по URL |
+| 4 | `toursTabOpensToursPage`                    | Клик «Туры» → URL `/travel/tours`, кнопка партнёра |
+| 5 | `directNavigationToFlightsPage`             | **Краевой:** прямой переход по URL |
 
 ### UC-03 / `FlightSearchTest`
 
-| # | Метод                                  | Что проверяется |
-|---|----------------------------------------|------------------|
-| 1 | `formHasAllKeyElements`                | Все обязательные поля и кнопки видны |
-| 2 | `originAutocompleteShowsSuggestions`   | Ввод «Моск» открывает подсказки |
-| 3 | `selectingSuggestionFillsOriginField`  | Выбор подсказки заполняет поле |
-| 4 | `fullOneWayFlightSearchOpensResults`   | Полный сценарий Москва → Сочи → выдача |
-| 5 | `EdgeCases.emptyFormDoesNotProceedToResults` | **Краевой:** пустая форма не запускает поиск |
-| 6 | `EdgeCases.onlyOriginFilled_doesNotProceed`  | **Краевой:** только «Откуда» |
-| 7 | `EdgeCases.onlyDestinationFilled_doesNotProceed` | **Краевой:** только «Куда» |
-| 8 | `EdgeCases.sameOriginAndDestination_doesNotProceed` | **Краевой:** одинаковые города |
-| 9 | `EdgeCases.clearingOrigin_emptiesField` | **Краевой:** очистка поля |
-| 10| `EdgeCases.nonExistentCity_doesNotShowMeaningfulSuggestions` | **Краевой:** несуществующий город |
-| 11| `EdgeCases.singleLetterInput_isHandledSafely` | **Краевой:** ввод одной буквы |
-| 12| `EdgeCases.retypingAfterClear_showsSuggestionsAgain` | **Краевой:** очистка и повторный ввод |
+| #  | Метод                                                | Что проверяется |
+|----|------------------------------------------------------|------------------|
+| 1  | `formHasAllKeyElements`                              | Все обязательные поля и кнопки видны |
+| 2  | `destinationAutocompleteShowsSuggestions`            | Ввод «Моск» в «Куда» открывает подсказки |
+| 3  | `selectingSuggestionFillsDestinationField`           | Выбор подсказки заполняет «Куда» |
+| 4  | `fullSearchOpensResults`                             | Полный сценарий: «Сочи» → Найти → выдача |
+| 5  | `originIsPrefilledByDefault`                         | «Откуда» уже заполнено (Санкт-Петербург) |
+| 6  | `EdgeCases.bothEmpty_doesNotProceed`                 | **Краевой:** оба поля пустые → поиск не идёт |
+| 7  | `EdgeCases.onlyOriginPrefilled_doesNotProceed`       | **Краевой:** только «Откуда» (default) |
+| 8  | `EdgeCases.clearingOrigin_emptiesField`              | **Краевой:** очистка поля «Откуда» |
+| 9  | `EdgeCases.nonExistentCity_noSuggestionContainsTheInput` | **Краевой:** бессмыслица → ни одна подсказка не содержит её |
+| 10 | `EdgeCases.retypingAfterClear_showsSuggestionsAgain` | **Краевой:** очистка и повторный ввод |
+| 11 | `EdgeCases.knownCity_returnsAtLeastOneSuggestion`    | **Краевой:** известный город → ≥1 подсказка |
 
 ### UC-04 / `HotelSearchTest`
 
 | # | Метод                                              | Что проверяется |
 |---|----------------------------------------------------|------------------|
-| 1 | `formHasMandatoryFields`                           | Поле города и кнопка поиска |
+| 1 | `formHasAllFields`                                 | Поле города, даты, гости, кнопка «Искать» |
 | 2 | `destinationAutocompleteShowsSuggestions`          | Подсказки при вводе города |
 | 3 | `hotelSearchByCityOpensResults`                    | Полный сценарий поиска |
 | 4 | `EdgeCases.emptyDestination_doesNotProceed`        | **Краевой:** пустое поле города |
-| 5 | `EdgeCases.nonExistentCity_doesNotShowMeaningfulSuggestions` | **Краевой:** несуществующий город |
-| 6 | `EdgeCases.clearingDestination_removesSuggestions` | **Краевой:** очистка поля города |
+| 5 | `EdgeCases.nonExistentCity_noSuggestionContainsInput` | **Краевой:** бессмыслица в автокомплите |
+| 6 | `EdgeCases.clearingDestination_emptiesValue`       | **Краевой:** очистка поля города |
 | 7 | `EdgeCases.reopenPage_preservesFunctionality`      | **Краевой:** перезагрузка страницы |
 
 ### UC-05 / `TrainSearchTest`
 
-| # | Метод                                                  | Что проверяется |
-|---|--------------------------------------------------------|------------------|
-| 1 | `formHasMandatoryElements`                             | Поля «Откуда», «Куда», дата, кнопка |
-| 2 | `originAutocompleteShowsSuggestions`                   | Подсказки при вводе города |
-| 3 | `searchTrainBetweenCities`                             | Москва → Санкт-Петербург → выдача |
-| 4 | `EdgeCases.emptyForm_doesNotProceed`                   | **Краевой:** пустая форма |
-| 5 | `EdgeCases.onlyOriginFilled_doesNotProceed`            | **Краевой:** только «Откуда» |
-| 6 | `EdgeCases.sameOriginAndDestination_doesNotProceed`    | **Краевой:** одинаковые города |
-| 7 | `EdgeCases.nonExistentCity_showsNoSuggestions`         | **Краевой:** несуществующий город |
+| # | Метод                                              | Что проверяется |
+|---|----------------------------------------------------|------------------|
+| 1 | `formHasMandatoryElements`                         | Поля «Откуда», «Куда», «Когда», «Пассажиры», кнопка |
+| 2 | `passengersHasDefaultValue`                        | «Пассажиры» = «1 взрослый» по умолчанию |
+| 3 | `originAutocompleteShowsSuggestions`               | Подсказки при вводе города |
+| 4 | `EdgeCases.emptyForm_doesNotProceed`               | **Краевой:** пустая форма |
+| 5 | `EdgeCases.onlyOriginFilled_doesNotProceed`        | **Краевой:** только «Откуда» |
+| 6 | `EdgeCases.nonExistentCity_noSuggestionContainsInput` | **Краевой:** бессмыслица в автокомплите |
+| 7 | `EdgeCases.retypingAfterClear_showsSuggestionsAgain` | **Краевой:** повторный набор после очистки |
 
 ### UC-06 / `TourPageTest`
 
-| # | Метод                          | Что проверяется |
-|---|--------------------------------|------------------|
-| 1 | `tourPageLoads`                | URL содержит `/travel/tours` |
-| 2 | `tourPageHasDestinationField`  | Поле направления отображается |
-
-### UC-07 / `SwapCitiesTest`
-
 | # | Метод                                       | Что проверяется |
-|---|----------------------------------------------|------------------|
-| 1 | `swapButtonIsVisible`                        | Кнопка swap отображается |
-| 2 | `swapExchangesOriginAndDestination`          | Swap меняет значения местами |
-| 3 | `EdgeCases.swapWithEmptyFields_doesNotCrash` | **Краевой:** swap при пустых полях |
-| 4 | `EdgeCases.doubleSwap_restoresOriginalState` | **Краевой:** двойной swap → исходное состояние |
+|---|---------------------------------------------|------------------|
+| 1 | `tourPageLoads`                             | URL содержит `/travel/tours` |
+| 2 | `findTourButtonsArePresent`                 | Видна хотя бы одна кнопка «Найти тур» |
+| 3 | `EdgeCases.reloadingPreservesContent`       | **Краевой:** перезагрузка сохраняет число партнёрских кнопок |
+
+### UC-07 / `ComplexRouteTest`
+
+| # | Метод                                              | Что проверяется |
+|---|----------------------------------------------------|------------------|
+| 1 | `complexRouteButtonIsVisible`                      | Кнопка «Сложный маршрут» видна |
+| 2 | `workTripToggleIsPresent`                          | Тоггл «Лечу по работе» присутствует |
+| 3 | `workTripToggleCanBeSwitched`                      | Тоггл переключается |
+| 4 | `EdgeCases.clickComplexRoute_doesNotBreakSearchForm` | **Краевой:** клик «Сложный маршрут» не ломает форму |
+| 5 | `EdgeCases.doubleToggle_restoresInitialState`      | **Краевой:** двойное переключение → исходное состояние |
 
 ### UC-08 / `DatePickerTest`
 
-| # | Метод                                          | Что проверяется |
-|---|------------------------------------------------|------------------|
-| 1 | `departureDateFieldIsVisible`                  | Поле «Туда» отображается |
-| 2 | `calendarOpensOnClick`                         | Клик по «Туда» открывает календарь |
-| 3 | `EdgeCases.calendarClosesOnEscape`             | **Краевой:** Esc закрывает календарь |
-| 4 | `EdgeCases.reopeningCalendar_doesNotBreakForm` | **Краевой:** повторное открытие календаря |
+| # | Метод                                              | Что проверяется |
+|---|----------------------------------------------------|------------------|
+| 1 | `departureDateFieldIsVisible`                      | Поле «Когда» отображается |
+| 2 | `calendarOpensOnClick`                             | Клик по «Когда» открывает gridcell-ячейки |
+| 3 | `EdgeCases.reopeningCalendar_doesNotBreakForm`     | **Краевой:** повторное открытие календаря |
+| 4 | `EdgeCases.openingCalendar_doesNotNavigateAway`    | **Краевой:** открытие календаря не меняет URL |
 
 ### UC-09 / `PassengersTest`
 
 | # | Метод                                              | Что проверяется |
 |---|----------------------------------------------------|------------------|
-| 1 | `passengersPanelOpens`                             | Селектор открывает панель |
-| 2 | `canSwitchToBusinessClass`                         | Выбор «Бизнес» работает |
-| 3 | `EdgeCases.panelStaysFunctionalAfterOpen`          | **Краевой:** панель не ломает форму |
-| 4 | `EdgeCases.canReopenSelectorAfterChoosingBusiness` | **Краевой:** повторное открытие после выбора |
+| 1 | `passengersFieldIsPresent`                         | Селектор пассажиров доступен |
+| 2 | `passengersPanelOpens`                             | Индикатор стрелки переходит в `Arrow_opened` |
+| 3 | `EdgeCases.panelStaysFunctionalAfterOpen`          | **Краевой:** панель не ломает остальные поля формы |
+| 4 | `EdgeCases.openingPassengersPanel_staysOnFlightsSection` | **Краевой:** не уводит с `/travel/flights` |
 
 ### UC-10 / `CrossSectionAutocompleteTest`
 
@@ -254,8 +254,8 @@ flowchart LR
 Запуск:
 
 ```bash
-./gradlew testChrome           # все 55 проверок в Chrome
-./gradlew testFirefox          # все 55 проверок в Firefox
+./gradlew testChrome           # все 61 проверка в Chrome
+./gradlew testFirefox          # все 61 проверка в Firefox
 ./test-parallel.sh             # параллельный запуск Chrome + Firefox
 ./test-parallel.sh '*MainPageTest*'   # параллельно, только нужный класс
 ```
@@ -266,13 +266,39 @@ flowchart LR
 * `build/test-results/testChrome/*.xml`
 * `build/test-results/testFirefox/*.xml`
 
-Сводная таблица (заполняется по результатам прогона):
+### Фактические результаты последнего прогона
 
-| Конфигурация              | Браузер           | Прошло | Упало | Время |
-|---------------------------|-------------------|:------:|:-----:|-------|
-| `./gradlew testChrome`    | Chrome            |   55   |   0   | ~ N с |
-| `./gradlew testFirefox`   | Firefox           |   55   |   0   | ~ N с |
-| `./test-parallel.sh`      | Chrome + Firefox  |  110   |   0   | ~ N с |
+| Конфигурация              | Браузер           | Прошло | Упало | Время  |
+|---------------------------|-------------------|:------:|:-----:|--------|
+| `./gradlew testChrome`    | Chrome 148        |  61    |   0   | ~9:57  |
+| `./gradlew testFirefox`   | Firefox           |   —    |   —   | требует установки Firefox |
+| `./test-parallel.sh`      | Chrome + Firefox  | 61 + ?  |   —   | требует Firefox |
+
+> **Замечание про Firefox:** geckodriver автоматически устанавливается
+> WebDriverManager, но сам **Firefox-браузер должен быть установлен в системе**.
+> На машине, где собран отчёт, Firefox отсутствовал, поэтому фактические
+> числа для Firefox-запуска не приводятся; код тестов протестирован в Chrome
+> и не содержит браузер-специфичного кода — после установки Firefox прогон
+> должен пройти аналогично.
+
+### Особенности реализации
+
+T-Travel — фронтенд на React/Next.js с динамически генерируемыми
+CSS-классами и контролируемыми React'ом инпутами:
+
+* Локаторы построены на устойчивых атрибутах `data-qa-type` и `aria-label`,
+  а не на классах.
+* Сам `<input>` визуально перекрыт div-плейсхолдером и иногда считается
+  Selenium'ом «не interactable», поэтому ввод реализован через комбинацию:
+  клик по контейнеру `Suggest_*_no-error`, JS-сеттер прототипа
+  `HTMLInputElement.value`, `Event('input')` (чтобы React увидел изменение)
+  и `sendKeys` для эмуляции keydown/keyup, открывающих выпадашку.
+* Подсказки автокомплита выбираются через клавиатуру `Arrow_Down` + `Enter`
+  — это надёжнее, чем кликать по `<li>`, который React может пересоздать
+  до click-евента.
+* Навигация по разделам прокликивается через JavaScript (`HTMLElement.click()`)
+  — у T-Travel над хедером бывает sticky-баннер, который перехватывает
+  обычный клик.
 
 ---
 

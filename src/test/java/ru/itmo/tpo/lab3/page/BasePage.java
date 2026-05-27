@@ -81,16 +81,25 @@ public class BasePage {
     }
 
     protected void clearAndType(WebElement element, String text) {
-        element.click();
-        element.sendKeys(Keys.chord(Keys.CONTROL, "a"));
-        element.sendKeys(Keys.DELETE);
+        clearField(element);
         element.sendKeys(text);
     }
 
+    /**
+     * Надёжная очистка React-инпута: Ctrl+A → Delete и контрольная зачистка
+     * BACKSPACE'ами в случае, если значение осталось.
+     */
     protected void clearField(WebElement element) {
         element.click();
         element.sendKeys(Keys.chord(Keys.CONTROL, "a"));
         element.sendKeys(Keys.DELETE);
+        String value = element.getAttribute("value");
+        if (value != null && !value.isEmpty()) {
+            int len = value.length();
+            for (int i = 0; i < len + 2; i++) {
+                element.sendKeys(Keys.BACK_SPACE);
+            }
+        }
     }
 
     protected void pressEscape() {
@@ -99,6 +108,29 @@ public class BasePage {
 
     protected void clickOnBody() {
         ((JavascriptExecutor) driver).executeScript("document.body.click();");
+    }
+
+    /**
+     * Корректно меняет значение в React-controlled input:
+     *  - вызывает нативный value-setter (минуя кеш React),
+     *  - диспатчит 'input' event с bubbles=true (React-обработчик увидит изменение).
+     * Это нужно, потому что обычный sendKeys в полях T-Travel иногда теряется.
+     */
+    protected void setReactInputValue(WebElement input, String value) {
+        ((JavascriptExecutor) driver).executeScript(
+                "var el = arguments[0];"
+                        + "var v = arguments[1];"
+                        + "var setter = Object.getOwnPropertyDescriptor("
+                        + "    window.HTMLInputElement.prototype, 'value').set;"
+                        + "setter.call(el, v);"
+                        + "el.dispatchEvent(new Event('input', { bubbles: true }));"
+                        + "el.dispatchEvent(new Event('change', { bubbles: true }));",
+                input, value);
+    }
+
+    /** Фокусирует элемент через JS — работает даже если он визуально невидим. */
+    protected void jsFocus(WebElement element) {
+        ((JavascriptExecutor) driver).executeScript("arguments[0].focus();", element);
     }
 
     /**

@@ -1,34 +1,5 @@
 # TPO Lab 3 — Functional UI tests for T-Bank Travel
 
-Автоматизированные функциональные тесты сайта <https://www.tbank.ru/travel/>
-на Java + Selenium WebDriver + JUnit 5 + Gradle.
-
-* **Page Object** — пакет `ru.itmo.tpo.lab3.page`.
-* **Только XPath**-локаторы (требование лабораторной).
-* **`WebDriverWait` + `ExpectedConditions`** — никакого `Thread.sleep()`.
-* **Кросс-браузерный запуск** в Chrome и Firefox — по отдельности или
-  параллельно через `test-parallel.sh`.
-
-## Документация
-
-| Файл                                                         | Содержание                                |
-|--------------------------------------------------------------|-------------------------------------------|
-| [docs/use-cases.md](docs/use-cases.md)                       | Карточки 10 прецедентов использования     |
-| [docs/use-case-diagram.md](docs/use-case-diagram.md)         | UseCase-диаграмма (PlantUML + Mermaid)    |
-| [checklist.md](checklist.md)                                 | Чек-лист тестового покрытия (30 проверок) |
-| [docs/report/report.md](docs/report/report.md)               | Полный отчёт по лабораторной              |
-
-## Требования
-
-| Компонент      | Версия / комментарий                              |
-|----------------|----------------------------------------------------|
-| JDK            | 17+                                                |
-| Gradle         | через `./gradlew` (jar лежит в `gradle/wrapper/`)  |
-| Google Chrome  | актуальная — драйвер ставится автоматически        |
-| Mozilla Firefox| актуальная — драйвер ставится автоматически        |
-
-Драйверы (`chromedriver`, `geckodriver`) скачиваются автоматически через
-WebDriverManager при первом запуске — устанавливать вручную не нужно.
 
 ## Структура проекта
 
@@ -113,14 +84,3 @@ WebDriverManager при первом запуске — устанавливат
 * HTML-отчёт Chrome:  `build/reports/tests/testChrome/index.html`
 * HTML-отчёт Firefox: `build/reports/tests/testFirefox/index.html`
 * JUnit XML:          `build/test-results/testChrome/`, `build/test-results/testFirefox/`
-
-## Как добавлять новые тесты
-
-1. При необходимости — расширьте/создайте Page Object в
-   `src/test/java/ru/itmo/tpo/lab3/page/` (только XPath-локаторы).
-2. Унаследуйте тестовый класс от `BaseTest` (он сам создаст и закроет
-   браузер согласно `-Dbrowser`).
-3. Используйте методы `waitVisible / waitClickable / waitForUrl` —
-   никаких `Thread.sleep`.
-4. Добавьте описание сценария в [checklist.md](checklist.md) и
-   [docs/report/report.md](docs/report/report.md).
