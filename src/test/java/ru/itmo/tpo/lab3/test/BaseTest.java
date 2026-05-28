@@ -3,14 +3,15 @@ package ru.itmo.tpo.lab3.test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import ru.itmo.tpo.lab3.DriverFactory;
 
 import java.time.Duration;
 
 /**
- * Базовый класс для всех тестов
+ * Базовый класс для всех тестов: поднимает выбранный браузер до каждого
+ * теста и закрывает его после. Браузер задаётся системным свойством
+ * {@code browser} (chrome/firefox).
  */
 public abstract class BaseTest {
 
@@ -34,9 +35,5 @@ public abstract class BaseTest {
             } catch (Exception ignored) {
             }
         }
-    }
-
-    protected void waitForUrl(String fragment) {
-        wait.until(ExpectedConditions.urlContains(fragment));
     }
 }

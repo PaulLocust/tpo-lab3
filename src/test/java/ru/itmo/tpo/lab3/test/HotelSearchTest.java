@@ -1,107 +1,149 @@
 package ru.itmo.tpo.lab3.test;
 
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import ru.itmo.tpo.lab3.page.FavoritesPage;
+import ru.itmo.tpo.lab3.page.HotelCheckoutPage;
+import ru.itmo.tpo.lab3.page.HotelDetailsPage;
+import ru.itmo.tpo.lab3.page.HotelResultsPage;
 import ru.itmo.tpo.lab3.page.HotelSearchPage;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * UC-04: Поиск отелей.
- * Актор: Гость.
+ * UC-2: Выбор отеля (https://www.tbank.ru/travel/hotels/).
  *
- * На форме отелей по умолчанию заполнены даты и количество гостей,
- * не заполнено только направление.
+ * Покрывает include UC-14 (город) и extend-фильтры UC-15..UC-18.
  */
 public class HotelSearchTest extends BaseTest {
 
-    private HotelSearchPage hotelPage;
+    private static final String CITY = "Сочи";
 
-    @BeforeEach
-    void openHotelForm() {
-        hotelPage = new HotelSearchPage(driver).open();
-    }
-
-    // ============== Основной поток ==============
-
-    @Test
-    @DisplayName("Форма содержит поле направления, даты, гостей и кнопку 'Искать'")
-    void formHasAllFields() {
-        assertTrue(hotelPage.isDestinationInputVisible(), "Нет поля направления");
-        assertTrue(hotelPage.isDateFieldVisible(),        "Нет поля диапазона дат");
-        assertTrue(hotelPage.isGuestsFieldVisible(),      "Нет поля количества гостей");
-        assertTrue(hotelPage.isSearchButtonVisible(),     "Нет кнопки 'Искать'");
-    }
-
-    @Test
-    @DisplayName("Ввод названия города показывает выпадающий listbox подсказок")
-    void destinationAutocompleteShowsSuggestions() {
-        hotelPage.typeDestination("Соч");
-        assertTrue(hotelPage.isSuggestionsListboxVisible()
-                        || hotelPage.isSuggestionsVisible(),
-                "Должны отображаться подсказки автокомплита при вводе названия города");
-    }
-
-    @Test
-    @DisplayName("Полный сценарий: выбор города и нажатие 'Искать' переходит к результатам")
-    void hotelSearchByCityOpensResults() {
-        hotelPage
-                .typeDestination("Сочи")
-                .chooseFirstSuggestion()
+    private HotelResultsPage performBaseSearch() {
+        return new HotelSearchPage(driver).open()
+                .typeDestination(CITY).chooseFirstSuggestion()
                 .clickSearch();
-        assertTrue(hotelPage.isResultsOpened(),
-                "После выбора города и нажатия 'Искать' должна открыться страница результатов");
     }
 
-    // ============== Краевые случаи ==============
+    // ============ Основной поток UC-2 ============
 
-    @Nested
-    @DisplayName("Краевые случаи поиска отелей")
-    class EdgeCases {
+    @Test
+    @DisplayName("UC-2 e2e: город → Искать → открывается страница выдачи отелей")
+    void endToEndSearchOpensResults() {
+        HotelResultsPage results = performBaseSearch();
+        assertTrue(results.isOpened(),
+                "После заполненной формы должна открываться выдача отелей");
+    }
 
-        @Test
-        @DisplayName("Краевой: поиск с пустым полем города не даёт перехода")
-        void emptyDestination_doesNotProceed() {
-            String before = driver.getCurrentUrl();
-            hotelPage.clickSearch();
-            assertTrue(hotelPage.stayedOnSearchForm(before),
-                    "С пустым полем города поиск не должен запускаться");
+    // ============ Include UC-14 (город) ============
+
+    @Test
+    @DisplayName("UC-14: ввод города показывает выпадающий listbox подсказок и заполняет поле")
+    void destinationAutocompleteFillsField() {
+        HotelSearchPage page = new HotelSearchPage(driver).open()
+                .typeDestination(CITY);
+        assertTrue(page.isSuggestionsVisible(),
+                "Должен показаться список подсказок для города '" + CITY + "'");
+        page.chooseFirstSuggestion();
+        String value = page.getDestinationValue();
+        assertTrue(value != null && !value.isBlank(),
+                "После выбора подсказки поле должно быть заполнено, получено: " + value);
+    }
+
+    // ============ Extend UC-15 (сортировка по цене) ============
+
+    @Test
+    @DisplayName("UC-15: сортировка 'Сначала дешевле' → цены идут не убывающим порядком")
+    void sortByCheaperResultsAreNonDecreasing() {
+        HotelResultsPage results = performBaseSearch().sortByCheapest();
+        Assumptions.assumeTrue(results.cardsCount() >= 2,
+                "Недостаточно карточек для проверки сортировки — пропускаем");
+
+        List<Long> prices = results.readPrices();
+        Assumptions.assumeTrue(prices.size() >= 2,
+                "Не удалось распарсить цены из карточек — пропускаем");
+
+        for (int i = 1; i < prices.size(); i++) {
+            assertTrue(prices.get(i) >= prices.get(i - 1),
+                    "Карточка #" + i + " дешевле предыдущей: "
+                            + prices.get(i) + " < " + prices.get(i - 1));
         }
+    }
 
-        @Test
-        @DisplayName("Краевой: ввод бессмыслицы — ни одна подсказка не содержит введённой строки")
-        void nonExistentCity_noSuggestionContainsInput() {
-            String junk = "Кфтыкчоувапролд";
-            hotelPage.typeDestination(junk);
-            assertFalse(hotelPage.anySuggestionContains(junk),
-                    "Подсказок, содержащих '" + junk + "', быть не должно");
-        }
+    // ============ Extend UC-16 (спецпредложения) ============
 
-        @Test
-        @DisplayName("Краевой: очистка поля города убирает значение")
-        void clearingDestination_emptiesValue() {
-            hotelPage.typeDestination("Сочи").chooseFirstSuggestion();
-            String filled = hotelPage.getDestinationValue();
-            assertTrue(filled != null && !filled.isBlank(),
-                    "До очистки поле должно быть заполнено");
-            hotelPage.clearDestination();
-            String afterClear = hotelPage.getDestinationValue();
-            assertTrue(afterClear == null || afterClear.isBlank(),
-                    "После очистки поле города должно быть пустым");
-        }
+    @Test
+    @DisplayName("UC-16: фильтр 'Спецпредложения' → в карточках виден индикатор скидки")
+    void specialOfferFilterShowsDiscountInCards() {
+        HotelResultsPage results = performBaseSearch()
+                .toggleFilterByLabel("спецпредлож");
+        Assumptions.assumeTrue(results.cardsCount() > 0,
+                "Нет отелей со спецпредложениями — пропускаем");
 
-        @Test
-        @DisplayName("Краевой: повторное открытие страницы не ломает форму")
-        void reopenPage_preservesFunctionality() {
-            hotelPage.typeDestination("Сочи");
-            hotelPage = new HotelSearchPage(driver).open();
-            assertTrue(hotelPage.isDestinationInputVisible(),
-                    "После перезагрузки страницы поле города должно быть доступно");
-            assertTrue(hotelPage.isSearchButtonVisible(),
-                    "После перезагрузки кнопка 'Искать' должна быть доступна");
-        }
+        assertTrue(results.allCardsHaveDiscountIndicator(),
+                "Все карточки должны содержать индикатор скидки / спецпредложения");
+    }
+
+    // ============ Extend UC-17 (бесплатная отмена) ============
+
+    @Test
+    @DisplayName("UC-17: фильтр 'Бесплатная отмена' → во всех карточках есть метка")
+    void freeCancellationFilterShowsFreeCancelInCards() {
+        HotelResultsPage results = performBaseSearch()
+                .toggleFilterByLabel("бесплатная отмена");
+        Assumptions.assumeTrue(results.cardsCount() > 0,
+                "Нет отелей с бесплатной отменой — пропускаем");
+
+        assertTrue(results.allCardsMentionFreeCancellation(),
+                "Все карточки должны иметь метку 'Бесплатная отмена'");
+    }
+
+    // ============ Extend UC-18 (избранное) ============
+
+    @Test
+    @DisplayName("UC-18: отель, добавленный в избранное, виден в разделе 'Избранное'")
+    void hotelAddedFromCardAppearsInFavorites() {
+        HotelResultsPage results = performBaseSearch();
+        Assumptions.assumeTrue(results.cardsCount() > 0, "Нет отелей в выдаче — пропускаем");
+
+        String hotelTitle = results.addFirstHotelToFavorites();
+        Assumptions.assumeTrue(hotelTitle != null && !hotelTitle.isBlank(),
+                "Не удалось прочитать название отеля — пропускаем");
+
+        FavoritesPage favorites = new FavoritesPage(driver).open();
+        assertTrue(favorites.containsHotelTitle(hotelTitle),
+                "Отель '" + hotelTitle + "' должен присутствовать в избранном");
+    }
+
+    @Test
+    @DisplayName("UC-2 шаг 7: клик по карточке открывает страницу отеля")
+    void clickingHotelCardOpensDetails() {
+        HotelResultsPage results = performBaseSearch();
+        Assumptions.assumeTrue(results.cardsCount() > 0, "Нет отелей в выдаче — пропускаем");
+
+        HotelDetailsPage details = results.openFirstCard();
+        assertTrue(details.isOpened(),
+                "После клика по карточке должна открыться страница отеля");
+    }
+
+    // ============ Extend UC-22 (переход к бронированию) ============
+
+    @Test
+    @DisplayName("UC-22: 'Выбрать номер' открывает /travel/hotels/new/checkout")
+    void selectRoomOpensHotelCheckout() {
+        HotelResultsPage results = performBaseSearch();
+        Assumptions.assumeTrue(results.cardsCount() > 0, "Нет отелей в выдаче — пропускаем");
+
+        HotelDetailsPage details = results.openFirstCard();
+        Assumptions.assumeTrue(details.isOpened(),
+                "Страница отеля не открылась — пропускаем");
+
+        HotelCheckoutPage checkout = details.selectRoom();
+        assertTrue(checkout.isOpened(),
+                "URL должен содержать '" + HotelCheckoutPage.URL_FRAGMENT
+                        + "', получено: " + checkout.currentUrl());
     }
 }
